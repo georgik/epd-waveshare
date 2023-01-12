@@ -23,7 +23,8 @@ pub(crate) struct DisplayInterface<SPI, CS, BUSY, DC, RST, DELAY> {
     /// number of ms the idle loop should sleep on
     delay_us: u32,
 }
-
+use esp_println::println;
+use esp_println::print;
 impl<SPI, CS, BUSY, DC, RST, DELAY> DisplayInterface<SPI, CS, BUSY, DC, RST, DELAY>
 where
     SPI: Write<u8>,
@@ -49,15 +50,16 @@ where
             delay_us,
         }
     }
-
+    
     /// Basic function for sending [Commands](Command).
     ///
     /// Enables direct interaction with the device with the help of [data()](DisplayInterface::data())
     pub(crate) fn cmd<T: Command>(&mut self, spi: &mut SPI, command: T) -> Result<(), SPI::Error> {
         // low for commands
-        let _ = self.dc.set_low();
+        // let _ = self.dc.set_low();
 
         // Transfer the command over spi
+        println!("C: {:#04x}", command.address());
         self.write(spi, &[command.address()])
     }
 
@@ -66,12 +68,14 @@ where
     /// Enables direct interaction with the device with the help of [command()](Epd4in2::command())
     pub(crate) fn data(&mut self, spi: &mut SPI, data: &[u8]) -> Result<(), SPI::Error> {
         // high for data
-        let _ = self.dc.set_high();
-
+        // let _ = self.dc.set_high();
+        print!("D:");
         for val in data.iter().copied() {
             // Transfer data one u8 at a time over spi
             self.write(spi, &[val])?;
+            print!(" {:#04x}", val);
         }
+        println!(".");
 
         Ok(())
     }
@@ -202,14 +206,15 @@ where
     /// Most displays seem to require keeping it low for 10ms, but the 7in5_v2 only seems to reset
     /// properly with 2ms
     pub(crate) fn reset(&mut self, delay: &mut DELAY, initial_delay: u32, duration: u32) {
-        let _ = self.rst.set_high();
-        delay.delay_us(initial_delay);
+        // let _ = self.rst.set_high();
+        // delay.delay_us(initial_delay);
 
         let _ = self.rst.set_low();
         delay.delay_us(duration);
         let _ = self.rst.set_high();
         //TODO: the upstream libraries always sleep for 200ms here
         // 10ms works fine with just for the 7in5_v2 but this needs to be validated for other devices
-        delay.delay_us(200_000);
+        delay.delay_us(duration);
+        self.wait_until_idle(delay, self.is_busy(false));
     }
 }

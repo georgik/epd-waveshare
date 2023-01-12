@@ -115,29 +115,103 @@ where
         self.interface.reset(delay, 10_000, 10_000);
 
         // start the booster
-        self.interface
-            .cmd_with_data(spi, Command::BoosterSoftStart, &[0x17, 0x17, 0x17])?;
+        // self.interface
+        //     .cmd_with_data(spi, Command::BoosterSoftStart, &[0x17, 0x17, 0x17])?;
 
+        //WIP
         // power on
-        self.command(spi, Command::PowerOn)?;
-        delay.delay_us(5000);
-        self.wait_until_idle(spi, delay)?;
+        // self.command(spi, Command::Init)?;
+        self.interface
+        .wait_until_idle_with_cmd(spi, delay, false,  Command::Init)?;
+        // // Set RAM Data Entry Mode
+        self.interface
+        .wait_until_idle_with_cmd(spi, delay, false,  Command::DataStartTransmission2)?;
+        // self.cmd_with_data(spi, Command::DataStartTransmission2, &[0x03])?;
+        self.interface.data(spi, &[0x03]);
+
+        let x_pixels_par:u8 = 212 - 1;
+        let y_pixels_par:u8 = 104 - 1;
+        let x_start:u8 = 0;
+        let x_end = x_pixels_par / 8;
+        let y_start:u8 = 0x00;
+        let y_start1:u8 = 0x00;
+        let y_end = y_pixels_par;// % 256;
+        let y_end1 = y_pixels_par;// / 256;
+
+        // // Set RAM area
+    
+        self.interface
+        .wait_until_idle_with_cmd(spi, delay, false,  Command::SetRamArea)?;
+        self.interface.data(spi,  &[x_start + 1, x_end + 1])?;
+
+        self.interface
+        .wait_until_idle_with_cmd(spi, delay, false,  Command::SetRamArea2)?;
+        self.interface.data(spi,  &[y_start, y_start1, y_end, y_end1])?;
+
+        // self.cmd_with_data(spi, Command::SetRamArea2, &[y_start, y_start1, y_end, y_end1])?;
+
+        // // Set RAM pointer
+        self.interface
+        .wait_until_idle_with_cmd(spi, delay, false,  Command::SetRamPointer)?;
+        self.interface.data(spi,  &[0x01])?;
+
+        self.interface
+        .wait_until_idle_with_cmd(spi, delay, false,  Command::SetRamPointer)?;
+        self.interface.data(spi,  &[0x00, 0x00])?;
+        // self.cmd_with_data(spi, Command::SetRamPointer, &[0x01])?;
+        // self.cmd_with_data(spi, Command::SetRamPointer2, &[0x00, 0x00])?;
+
+
+        // // Set LUT
+        let lut_data:[u8;70]= [
+            0x80, 0x60, 0x40, 0x00, 0x00, 0x00, 0x00, //LUT0: BB:     VS 0 ~7
+            0x10, 0x60, 0x20, 0x00, 0x00, 0x00, 0x00, //LUT1: BW:     VS 0 ~7
+            0x80, 0x60, 0x40, 0x00, 0x00, 0x00, 0x00, //LUT2: WB:     VS 0 ~7
+            0x10, 0x60, 0x20, 0x00, 0x00, 0x00, 0x00, //LUT3: WW:     VS 0 ~7
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, //LUT4: VCOM:   VS 0 ~7
+            0x03, 0x03, 0x00, 0x00, 0x02, // TP0 A~D RP0
+            0x09, 0x09, 0x00, 0x00, 0x02, // TP1 A~D RP1
+            0x03, 0x03, 0x00, 0x00, 0x02, // TP2 A~D RP2
+            0x00, 0x00, 0x00, 0x00, 0x00, // TP3 A~D RP3
+            0x00, 0x00, 0x00, 0x00, 0x00, // TP4 A~D RP4
+            0x00, 0x00, 0x00, 0x00, 0x00, // TP5 A~D RP5
+            0x00, 0x00, 0x00, 0x00, 0x00, // TP6 A~D RP6
+        ];
+        self.interface
+        .wait_until_idle_with_cmd(spi, delay, false,  Command::LutData)?;
+        self.interface.data(spi, &lut_data)?;
+        // self.cmd_with_data(spi, Command::LutData, &lut_data)?;
+
+        // // PowerOn
+        self.interface
+        .wait_until_idle_with_cmd(spi, delay, false,  Command::PowerOn)?;
+        self.interface.data(spi, &[0xc0, 0x20])?;
+        // self.cmd_with_data(spi, Command::PowerOn, &[0xc0, 0x20])?;
+    
+
+        // Update
+        let write:[u8; 22048] = [0xff;212*104];
+        self.interface
+        .wait_until_idle_with_cmd(spi, delay, false,  Command::DisplayRefresh)?;
+        self.interface.data(spi, &write)?;
+        // delay.delay_us(5000);
+        // self.wait_until_idle(spi, delay)?;
 
         // set the panel settings
-        self.cmd_with_data(spi, Command::PanelSetting, &[0x8F])?;
+        // self.cmd_with_data(spi, Command::PanelSetting, &[0x8F])?;
 
-        self.cmd_with_data(
-            spi,
-            Command::VcomAndDataIntervalSetting,
-            &[WHITE_BORDER | VCOM_DATA_INTERVAL],
-        )?;
+        // self.cmd_with_data(
+        //     spi,
+        //     Command::VcomAndDataIntervalSetting,
+        //     &[WHITE_BORDER | VCOM_DATA_INTERVAL],
+        // )?;
 
-        // set resolution
-        self.send_resolution(spi)?;
+        // // set resolution
+        // self.send_resolution(spi)?;
 
-        self.cmd_with_data(spi, Command::VcmDcSetting, &[0x0A])?;
+        // self.cmd_with_data(spi, Command::VcmDcSetting, &[0x0A])?;
 
-        self.wait_until_idle(spi, delay)?;
+        // self.wait_until_idle(spi, delay)?;
 
         Ok(())
     }
@@ -340,6 +414,11 @@ where
     ) -> Result<(), SPI::Error> {
         Ok(())
     }
+
+    // fn wait_until_idle_wit_cmd(&mut self, spi: &mut SPI, delay: &mut DELAY) -> Result<(), SPI::Error> {
+    //     self.interface
+    //         .wait_until_idle_with_cmd(spi, delay, IS_BUSY_LOW, Command::GetStatus)
+    // }
 
     fn wait_until_idle(&mut self, _spi: &mut SPI, delay: &mut DELAY) -> Result<(), SPI::Error> {
         self.interface.wait_until_idle(delay, IS_BUSY_LOW);
