@@ -12,6 +12,7 @@ pub(crate) enum Command {
     BoosterSoftStart = 0x06,
     DeepSleep = 0x07,
     DataStartTransmission1 = 0x10,
+    Init2 = 0x11,
     Init = 0x12,
     DataStartTransmission2 = 0x13,
 

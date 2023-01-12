@@ -69,11 +69,18 @@ where
     pub(crate) fn data(&mut self, spi: &mut SPI, data: &[u8]) -> Result<(), SPI::Error> {
         // high for data
         // let _ = self.dc.set_high();
+        let mut counter:u32 = 0;
         print!("D:");
         for val in data.iter().copied() {
             // Transfer data one u8 at a time over spi
             self.write(spi, &[val])?;
-            print!(" {:#04x}", val);
+            if counter < 10 {
+                print!(" {:#04x}", val);
+                counter += 1;
+            } else if counter == 10 {
+                print!(" ...");
+                counter += 1;
+            }
         }
         println!(".");
 
@@ -167,12 +174,16 @@ where
         is_busy_low: bool,
         status_command: T,
     ) -> Result<(), SPI::Error> {
-        self.cmd(spi, status_command)?;
-        if self.delay_us > 0 {
-            delay.delay_us(self.delay_us);
-        }
         while self.is_busy(is_busy_low) {
-            self.cmd(spi, status_command)?;
+            if self.delay_us > 0 {
+                delay.delay_us(self.delay_us);
+            }
+        }
+        self.cmd(spi, status_command)?;
+        // if self.delay_us > 0 {
+        //     delay.delay_us(self.delay_us);
+        // }
+        while self.is_busy(is_busy_low) {
             if self.delay_us > 0 {
                 delay.delay_us(self.delay_us);
             }
