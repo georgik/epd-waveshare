@@ -61,11 +61,11 @@ use crate::traits::{
 };
 
 /// Width of epd2in13bc in pixels
-pub const WIDTH: u32 = 104;
+pub const WIDTH: u32 = 128;
 /// Height of epd2in13bc in pixels
-pub const HEIGHT: u32 = 212;
+pub const HEIGHT: u32 = 128;
 /// Default background color (white) of epd2in13bc display
-pub const DEFAULT_BACKGROUND_COLOR: TriColor = TriColor::White;
+pub const DEFAULT_BACKGROUND_COLOR: Color = Color::White;
 
 /// Number of bits for b/w buffer and same for chromatic buffer
 const NUM_DISPLAY_BITS: u32 = WIDTH * HEIGHT / 8;
@@ -77,7 +77,7 @@ const BLACK_BORDER: u8 = 0x30;
 const CHROMATIC_BORDER: u8 = 0xb0;
 const FLOATING_BORDER: u8 = 0xF0;
 
-use crate::color::TriColor;
+use crate::color::Color;
 
 pub(crate) mod command;
 use self::command::Command;
@@ -88,15 +88,15 @@ use crate::buffer_len;
 pub type Display2in13bc = crate::graphics::Display<
     WIDTH,
     HEIGHT,
-    true,
+    false,
     { buffer_len(WIDTH as usize, HEIGHT as usize * 2) },
-    TriColor,
+    Color,
 >;
 
 /// Epd2in13bc driver
 pub struct Epd2in13bc<SPI, CS, BUSY, DC, RST, DELAY> {
     interface: DisplayInterface<SPI, CS, BUSY, DC, RST, DELAY>,
-    color: TriColor,
+    color: Color,
 }
 
 impl<SPI, CS, BUSY, DC, RST, DELAY> InternalWiAdditions<SPI, CS, BUSY, DC, RST, DELAY>
@@ -190,50 +190,23 @@ where
     
 
         // Update
-        let mut write:[u8; 4000] = [0x00;4000];
-        write[0] = 0x00;
-        write[10] = 0x00;
-        write[20] = 0x00;
-        self.interface
-        .wait_until_idle_with_cmd(spi, delay, false,  Command::DisplayRefresh)?;
-
-        self.interface.wait_until_idle(delay, false);
-        self.interface.data(spi, &write)?;
+        // let mut write:[u8; 4000] = [0x00;4000];
+        // write[0] = 0x00;
+        // write[10] = 0x00;
+        // write[20] = 0x00;
+        // self.interface
+        // .wait_until_idle_with_cmd(spi, delay, false,  Command::DisplayRefresh)?;
 
         // self.interface.wait_until_idle(delay, false);
         // self.interface.data(spi, &write)?;
 
+        // Power off
 
-        // self.interface.wait_until_idle(delay, false);
-        // self.interface.data(spi, &write)?;
-
-        // let mut write:[u8; 928] = [0xFF;928];
-        // self.interface.wait_until_idle(delay, false);
-        // self.interface.data(spi, &write)?;
-
-        // delay.delay_us(5000);
-        // self.wait_until_idle(spi, delay)?;
-
-        self.interface
-        .wait_until_idle_with_cmd(spi, delay, false,  Command::LutForVcom)?;
-        self.interface
-        .wait_until_idle_with_cmd(spi, delay, false,  Command::DataStartTransmission1)?;
-        self.interface.data(spi,  &[0x01])?;
-        // set the panel settings
-        // self.cmd_with_data(spi, Command::PanelSetting, &[0x8F])?;
-
-        // self.cmd_with_data(
-        //     spi,
-        //     Command::VcomAndDataIntervalSetting,
-        //     &[WHITE_BORDER | VCOM_DATA_INTERVAL],
-        // )?;
-
-        // // set resolution
-        // self.send_resolution(spi)?;
-
-        // self.cmd_with_data(spi, Command::VcmDcSetting, &[0x0A])?;
-
-        // self.wait_until_idle(spi, delay)?;
+        // self.interface
+        // .wait_until_idle_with_cmd(spi, delay, false,  Command::LutForVcom)?;
+        // self.interface
+        // .wait_until_idle_with_cmd(spi, delay, false,  Command::DataStartTransmission1)?;
+        // self.interface.data(spi,  &[0x01])?;
 
         Ok(())
     }
@@ -301,7 +274,7 @@ where
     RST: OutputPin,
     DELAY: DelayUs<u32>,
 {
-    type DisplayColor = TriColor;
+    type DisplayColor = Color;
     fn new(
         spi: &mut SPI,
         cs: CS,
@@ -342,11 +315,11 @@ where
         self.init(spi, delay)
     }
 
-    fn set_background_color(&mut self, color: TriColor) {
+    fn set_background_color(&mut self, color: Color) {
         self.color = color;
     }
 
-    fn background_color(&self) -> &TriColor {
+    fn background_color(&self) -> &Color {
         &self.color
     }
 
@@ -364,17 +337,28 @@ where
         buffer: &[u8],
         delay: &mut DELAY,
     ) -> Result<(), SPI::Error> {
-        self.interface.cmd(spi, Command::DataStartTransmission1)?;
+        // self.interface.cmd(spi, Command::DataStartTransmission1)?;
+        self.interface
+        .wait_until_idle_with_cmd(spi, delay, false,  Command::DisplayRefresh)?;
 
-        self.interface.data(spi, buffer)?;
+        self.interface.data(spi, &buffer)?;
+        self.interface.wait_until_idle(delay, false);
+
+
+        self.interface
+        .wait_until_idle_with_cmd(spi, delay, false,  Command::LutForVcom)?;
+        self.interface
+        .wait_until_idle_with_cmd(spi, delay, false,  Command::DataStartTransmission1)?;
+        self.interface.data(spi,  &[0x01])?;
+
 
         // Clear the chromatic layer
-        let color = self.color.get_byte_value();
+        // let color = self.color.get_byte_value();
 
-        self.interface.cmd(spi, Command::DataStartTransmission2)?;
-        self.interface.data_x_times(spi, color, NUM_DISPLAY_BITS)?;
+        // self.interface.cmd(spi, Command::DataStartTransmission2)?;
+        // self.interface.data_x_times(spi, color, NUM_DISPLAY_BITS)?;
 
-        self.wait_until_idle(spi, delay)?;
+        // self.wait_until_idle(spi, delay)?;
         Ok(())
     }
 
@@ -406,7 +390,7 @@ where
         delay: &mut DELAY,
     ) -> Result<(), SPI::Error> {
         self.update_frame(spi, buffer, delay)?;
-        self.display_frame(spi, delay)?;
+        // self.display_frame(spi, delay)?;
         Ok(())
     }
 
@@ -486,11 +470,11 @@ where
     }
 
     /// Set the outer border of the display to the chosen color.
-    pub fn set_border_color(&mut self, spi: &mut SPI, color: TriColor) -> Result<(), SPI::Error> {
+    pub fn set_border_color(&mut self, spi: &mut SPI, color: Color) -> Result<(), SPI::Error> {
         let border = match color {
-            TriColor::Black => BLACK_BORDER,
-            TriColor::White => WHITE_BORDER,
-            TriColor::Chromatic => CHROMATIC_BORDER,
+            Color::Black => BLACK_BORDER,
+            Color::White => WHITE_BORDER,
+            // TriColor::Chromatic => CHROMATIC_BORDER,
         };
         self.cmd_with_data(
             spi,
