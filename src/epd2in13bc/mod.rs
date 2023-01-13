@@ -190,13 +190,27 @@ where
     
 
         // Update
-        let mut write:[u8; 250*16] = [0xFF;250*16];
+        let mut write:[u8; 4000] = [0x00;4000];
         write[0] = 0x00;
         write[10] = 0x00;
         write[20] = 0x00;
         self.interface
         .wait_until_idle_with_cmd(spi, delay, false,  Command::DisplayRefresh)?;
+
+        self.interface.wait_until_idle(delay, false);
         self.interface.data(spi, &write)?;
+
+        // self.interface.wait_until_idle(delay, false);
+        // self.interface.data(spi, &write)?;
+
+
+        // self.interface.wait_until_idle(delay, false);
+        // self.interface.data(spi, &write)?;
+
+        // let mut write:[u8; 928] = [0xFF;928];
+        // self.interface.wait_until_idle(delay, false);
+        // self.interface.data(spi, &write)?;
+
         // delay.delay_us(5000);
         // self.wait_until_idle(spi, delay)?;
 

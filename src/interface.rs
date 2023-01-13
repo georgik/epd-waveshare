@@ -56,11 +56,13 @@ where
     /// Enables direct interaction with the device with the help of [data()](DisplayInterface::data())
     pub(crate) fn cmd<T: Command>(&mut self, spi: &mut SPI, command: T) -> Result<(), SPI::Error> {
         // low for commands
-        // let _ = self.dc.set_low();
+        let _ = self.dc.set_low();
 
         // Transfer the command over spi
         println!("C: {:#04x}", command.address());
+        
         self.write(spi, &[command.address()])
+
     }
 
     /// Basic function for sending an array of u8-values of data over spi
@@ -68,20 +70,21 @@ where
     /// Enables direct interaction with the device with the help of [command()](Epd4in2::command())
     pub(crate) fn data(&mut self, spi: &mut SPI, data: &[u8]) -> Result<(), SPI::Error> {
         // high for data
-        // let _ = self.dc.set_high();
+        let _ = self.dc.set_high();
         let mut counter:u32 = 0;
         print!("D:");
-        for val in data.iter().copied() {
-            // Transfer data one u8 at a time over spi
-            self.write(spi, &[val])?;
-            if counter < 10 {
-                print!(" {:#04x}", val);
-                counter += 1;
-            } else if counter == 10 {
-                print!(" ...");
-                counter += 1;
-            }
-        }
+        self.write(spi, &data)?;
+        // for val in data.iter().copied() {
+        //     // Transfer data one u8 at a time over spi
+        //     self.write(spi, &[val])?;
+        //     if counter < 10 {
+        //         print!(" {:#04x}", val);
+        //         counter += 1;
+        //     } else if counter == 10 {
+        //         print!(" ...");
+        //         counter += 1;
+        //     }
+        // }
         println!(".");
 
         Ok(())
@@ -121,13 +124,13 @@ where
     // spi write helper/abstraction function
     fn write(&mut self, spi: &mut SPI, data: &[u8]) -> Result<(), SPI::Error> {
         // activate spi with cs low
-        let _ = self.cs.set_low();
+        // let _ = self.cs.set_low();
 
         // transfer spi data
         // Be careful!! Linux has a default limit of 4096 bytes per spi transfer
         // see https://raspberrypi.stackexchange.com/questions/65595/spi-transfer-fails-with-buffer-size-greater-than-4096
         if cfg!(target_os = "linux") {
-            for data_chunk in data.chunks(4096) {
+            for data_chunk in data.chunks(8) {
                 spi.write(data_chunk)?;
             }
         } else {
@@ -135,7 +138,7 @@ where
         }
 
         // deactivate spi with cs high
-        let _ = self.cs.set_high();
+        // let _ = self.cs.set_high();
 
         Ok(())
     }
